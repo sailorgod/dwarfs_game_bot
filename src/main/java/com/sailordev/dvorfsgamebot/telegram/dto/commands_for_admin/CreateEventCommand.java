@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Update;
 
 @Slf4j
 @Component
@@ -27,7 +26,7 @@ public class CreateEventCommand implements Command {
         SendMessage sendMessage = new SendMessage();
         user.setState(UserState.AWAIT_SET_EVENT_DATE);
         userRepository.save(user);
-        String text = "Отлично. Введите дату и время начала ивента в формате - дд.мм.гггг чч.мм";
+        String text = "Отлично. Введите дату и время начала ивента в формате - дд.мм.гггг чч:мм";
         String chatId = user.getUserChatId();
         sendMessage.setChatId(chatId);
         sendMessage.setText(text);
