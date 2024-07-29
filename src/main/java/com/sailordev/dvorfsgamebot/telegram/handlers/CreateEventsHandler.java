@@ -5,17 +5,21 @@ import com.sailordev.dvorfsgamebot.model.UserEntity;
 import com.sailordev.dvorfsgamebot.repositories.EventRepository;
 import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
+import com.sailordev.dvorfsgamebot.telegram.dto.Interval;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -26,10 +30,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventsHandler {
     private static final Logger log = LoggerFactory.getLogger(EventsHandler.class);
+    public Interval interval;
     @Autowired
     private EventRepository eventRepository;
     @Autowired
     private UserRepository userRepository;
+    @Getter
     private Event lastEvent;
 
     public SendMessage setEventDateTime(String updateText, UserEntity user) {
@@ -157,7 +163,7 @@ public class EventsHandler {
         SendMessage sendMessage = new SendMessage();
         String description = "";
         if(lastEvent.getDescription() != null) {
-            description += "\nОзнакомьтесь с инструкциями к данному ивенту:";
+            description += "\nОзнакомьтесь с инструкциями к данному ивенту:\n";
             description += lastEvent.getDescription();
         }
         sendMessage.setChatId(user.getUserChatId());
@@ -171,11 +177,15 @@ public class EventsHandler {
 
     public SendMessage getNotification(UserEntity user) {
         Duration duration = Duration.between(LocalDateTime.now(), lastEvent.getEventDateTime());
+        long totalMinutes = duration.toMinutes();
+        long days = totalMinutes / (24 * 60);
+        long hours = (totalMinutes % (24 * 60) / 60);
+        long minutes = totalMinutes % 60;
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(user.getUserChatId());
         String text = "<b>До старта ивента " + lastEvent.getName() +
-                " остается " + duration.toDays() + " дней, " + duration.toHours() + " часов, " +
-                duration.toMinutes() + " минут. </b>";
+                " остается " + days + " дней, " + hours + " часов, " +
+                minutes + " минут. </b>";
         sendMessage.setText(text);
         sendMessage.setParseMode("HTML");
         return sendMessage;
@@ -196,4 +206,12 @@ public class EventsHandler {
         return inlineKeyboardMarkup;
     }
 
+    public SendMessage getStartEventNotification(UserEntity user) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(user.getUserChatId());
+        sendMessage.setText("<b>ОХОТА НА ГНОМОВ ОТКРЫТА</b>\n" +
+                "Получить координаты, подсказки и виды гномов вы сможете в меню бота");
+        sendMessage.setParseMode("HTML");
+        return sendMessage;
+    }
 }
