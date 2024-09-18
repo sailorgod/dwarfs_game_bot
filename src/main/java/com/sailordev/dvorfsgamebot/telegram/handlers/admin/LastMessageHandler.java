@@ -1,4 +1,4 @@
-package com.sailordev.dvorfsgamebot.telegram.handlers;
+package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
 import com.sailordev.dvorfsgamebot.repositories.UserRepository;

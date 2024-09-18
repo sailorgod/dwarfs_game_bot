@@ -1,8 +1,8 @@
 package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin;
 
-import com.sailordev.dvorfsgamebot.model.Event;
+import com.sailordev.dvorfsgamebot.model.Hint;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.EventRepository;
+import com.sailordev.dvorfsgamebot.repositories.HintsRepository;
 import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
@@ -18,10 +18,10 @@ import java.util.stream.StreamSupport;
 
 @Component
 @RequiredArgsConstructor
-public class StopEventCommand implements Command {
+public class EditHintCommand implements Command {
 
-    private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final HintsRepository hintsRepository;
 
     @Override
     public SendMessage sendCommandMessage(UserEntity user) {
@@ -29,44 +29,42 @@ public class StopEventCommand implements Command {
         String text = "";
         String chatId = user.getUserChatId();
         sendMessage.setChatId(chatId);
-        Iterator<Event> eventIterator = eventRepository.findAll().iterator();
-        if(!eventIterator.hasNext()) {
-            text = "Ивент для остановки не найден. Создайте новый ивент командой /create_event"
-                    + " или выберите это действие с клавиатуры.";
+        Iterator<Hint> hintIterator = hintsRepository.findAll().iterator();
+        if(!hintIterator.hasNext()) {
+            text = "Сохраненных подсказок не найдено. Создайте новую подсказку командой" +
+                    " /add_hint";
             sendMessage.setText(text);
             BotLogger.info(text, chatId);
             return sendMessage;
         }
-        text = "Выберите ивент для остановки.";
-        sendMessage.setText(text);
-        sendMessage.setReplyMarkup(stopEventKeyboard(eventIterator));
-        user.setState(UserState.AWAIT_SELECT_DELETE_EVENT);
-        userRepository.save(user);
-        return sendMessage;
-    }
-
-    private InlineKeyboardMarkup stopEventKeyboard(Iterator<Event> iterator){
-        List<Event> events = StreamSupport.stream(Spliterators.
-                        spliteratorUnknownSize(iterator, Spliterator.ORDERED), false).toList();
+        List<Hint> hints = StreamSupport.stream(Spliterators.
+                spliteratorUnknownSize(hintIterator, Spliterator.ORDERED), false).toList();
         List<InlineKeyboardButton> buttons = new ArrayList<>();
-        events.forEach(e -> {
-            InlineKeyboardButton button = new InlineKeyboardButton(e.getId().toString());
-            button.setCallbackData(e.getId().toString());
+        StringBuilder builder = new StringBuilder("Выберите подсказку из списка ниже:\n\n");
+        hints.forEach(h -> {
+            builder.append(h.getId()).append(" : ").append(h.getHintDescription()).append("\n");
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(h.getId().toString());
+            button.setCallbackData(h.getId().toString());
             buttons.add(button);
         });
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         inlineKeyboardMarkup.setKeyboard(List.of(buttons));
-        return inlineKeyboardMarkup;
+        text = builder.toString();
+        sendMessage.setText(text);
+        sendMessage.setReplyMarkup(inlineKeyboardMarkup);
+        user.setState(UserState.AWAIT_SELECT_EDIT_HINT);
+        userRepository.save(user);
+        return sendMessage;
     }
-
 
     @Override
     public String getName() {
-        return "Остановить ивент";
+        return "Редактировать подсказку";
     }
 
     @Override
     public String getDescription() {
-        return "Останавливает ивент, если он уже запущен";
+        return "Редактировать одну подсказку из списка";
     }
 }

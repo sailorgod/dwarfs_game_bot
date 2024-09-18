@@ -2,24 +2,28 @@ package com.sailordev.dvorfsgamebot.telegram.bot;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
 import com.sailordev.dvorfsgamebot.repositories.UserRepository;
-import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
-import com.sailordev.dvorfsgamebot.telegram.dto.CommandsHandler;
+import com.sailordev.dvorfsgamebot.telegram.dto.*;
 import com.sailordev.dvorfsgamebot.telegram.handlers.*;
-import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-;import java.time.LocalDateTime;
+;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
 @Slf4j
@@ -27,35 +31,40 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class DwarfsGameBot extends TelegramLongPollingBot {
 
+    @Getter
     private final TransactionsHandler transactionsHandler;
     private final UserRepository userRepository;
-    private LocalDateTime nextNotification;
+    private final ScheduledExecutorService scheduledExecutorService
+            = Executors.newScheduledThreadPool(1);
+    private Interval interval;
     private String notificationDuration;
-    private boolean isWaitingStartEvent;
+    private LocalDateTime startEventDate;
     private String lastUserId;
 
     @Override
     public void onUpdateReceived(Update update) {
-        if(isWaitingStartEvent && LocalDateTime.now().isAfter(nextNotification)) {
-            List<UserEntity> users = getUsersList();
-            users.forEach(u -> {
-                try {
-                    SendMessage sendMessage = transactionsHandler.getEventsHandler().getNotification(u);
-                    execute(sendMessage);
-                    BotLogger.info( sendMessage.getText(), u.getUserChatId() );
-                } catch (TelegramApiException e) {
-                    throw new RuntimeException(e);
-                }
-                notificationsHandler();
-            });
-        }
-        if (update.hasMessage() && update.getMessage().hasText()) {
+        if (update.hasMessage() && update.getMessage().hasText()){
+            String updateText = update.getMessage().getText();
             String chatId = update.getMessage().getChatId().toString();
             UserEntity user = getUser(chatId, update.getMessage().getChat());
             if(user.getState().equals(UserState.BAN)) {
                 return;
             }
-            String updateText = update.getMessage().getText();
+            if(updateText != null && updateText.startsWith("/start") && updateText
+                    .replace("/start", "").trim().matches("[0-9]+")){
+                try {
+                    execute(transactionsHandler.
+                            getInviteHandler().setHintToUser(user, updateText));
+                    if(!transactionsHandler.getInviteHandler().isFalseUser()) {
+                        execute(transactionsHandler.
+                                getInviteHandler().sendWellComeMessageAfterInvite(user));
+                    }
+                    return;
+                } catch (TelegramApiException e) {
+                    log.error(e.toString());
+                    throw new RuntimeException(e);
+                }
+            }
             log.info("{} : {}", user.getUserName(), updateText);
             update(updateText, update, user);
         } else if (update.hasCallbackQuery()) {
@@ -79,22 +88,24 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
     }
 
     private void update(String updateText, Update update, UserEntity user) {
-        CommandsHandler commandsHandler = null;
-        if(user.getUserChatId().equals(transactionsHandler.getAdminUserProperty().getChatId())) {
-            commandsHandler = transactionsHandler.getCommandsHandlerForAdmin();
-        } else {
-            commandsHandler = transactionsHandler.getCommandsHandlerForUser();
-        }
-        Optional<SendMessage> optionalSendMessage =
-                commandsHandler.commandsTransaction(updateText, user);
-
-        if(optionalSendMessage.isPresent()) {
-            try {
-                execute(optionalSendMessage.get());
-                log.info(optionalSendMessage.get().getText());
-                return;
-            } catch (TelegramApiException ex) {
-                log.error(ex.toString());
+        if(updateText != null) {
+            //TODO: Пофиксить команду старт так, чтобы не возникало повторного создания юзера
+            CommandsHandler commandsHandler = null;
+            if(user.getUserChatId().equals(transactionsHandler.getAdminUserProperty().getChatId())) {
+                commandsHandler = transactionsHandler.getCommandsHandlerForAdmin();
+            } else {
+                commandsHandler = transactionsHandler.getCommandsHandlerForUser();
+            }
+            Optional<SendMessage> optionalSendMessage =
+                    commandsHandler.commandsTransaction(updateText, user);
+            if(optionalSendMessage.isPresent()) {
+                try {
+                    execute(optionalSendMessage.get());
+                    log.info(optionalSendMessage.get().getText());
+                    return;
+                } catch (TelegramApiException ex) {
+                    log.error(ex.toString());
+                }
             }
         }
         try {
@@ -104,7 +115,8 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
         }
     }
 
-    private void states(String updateText, Update update, UserEntity user) throws TelegramApiException {
+    private void states(String updateText, Update update, UserEntity user)
+            throws TelegramApiException {
         if(user.getUserChatId().equals(transactionsHandler.getAdminUserProperty().getChatId())) {
             adminStates(updateText, user, update);
             return;
@@ -126,15 +138,44 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
             case AWAIT_ADMINS_RESPONSE -> {
                 execute(transactionsHandler.getMessageToAdminHandler().sendAnswerToUser(user));
             }
+            case AWAIT_SELECT_ACTION_HINT -> {
+                if(update.hasCallbackQuery()){
+                    deleteKeyboardHasCallbackQuery(update, user);
+                    execute(transactionsHandler.getInviteHandler()
+                            .selectCoordinates(update.getCallbackQuery().getData(), user));
+                }
+            }
+            case AWAIT_USER_SELECT_HINT -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.getInviteHandler().
+                        selectHint(user, updateText));
+            }
+
             default -> defaultMessage(updateText, user.getUserChatId());
         }
     }
 
-    private void adminStates(String updateText, UserEntity user, Update update) throws TelegramApiException {
+    private void adminStates(String updateText, UserEntity user, Update update)
+            throws TelegramApiException {
         SendMessage unknown = new SendMessage();
         unknown.setChatId(user.getUserChatId());
         unknown.setText("Ваш ответ не понятен. Выберите одну из кнопок в моем сообщении выше");
         switch (user.getState()) {
+            case SLEEP -> {
+                if(update.hasCallbackQuery()
+                        && update.getCallbackQuery().getData().contains("answer_")) {
+                    deleteKeyboardHasCallbackQuery(update, user);
+                    lastUserId = update
+                            .getCallbackQuery().getData().replace("answer_", "");
+                    SendMessage sendMessage = new SendMessage();
+                    sendMessage.setChatId(transactionsHandler.
+                            getAdminUserProperty().getChatId());
+                    sendMessage.setText("Введите ответ на сообщение:");
+                    user.setState(UserState.AWAIT_RESPONSE_TO_USER);
+                    userRepository.save(user);
+                    execute(sendMessage);
+                }
+            }
             case AWAIT_SET_KEYBOARD -> {
                 if(updateText.equals("/set_keyboard")) {
                     execute(transactionsHandler.getStartHandler().wellComeMessageForAdmin(user));
@@ -182,18 +223,166 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
             }
             case AWAIT_SET_NOTIFICATION_TIME -> {
                 if(update.hasCallbackQuery()) {
-                    firstNotificationHandler(updateText, user);
+                    firstNotificationHandler(updateText, user, update);
                     return;
                 }
                 execute(unknown);
             }
+            case AWAIT_FIRST_SELECT_EDIT_EVENT -> {
+                if (update.hasCallbackQuery()) {
+                    execute(deleteKeyboard(
+                            update.getCallbackQuery().getMessage().getMessageId(), user.getUserChatId()));
+                    execute(transactionsHandler.getEditEventHandler().selectEvent(user, updateText));
+                    return;
+                }
+                execute(unknown);
+            }
+            case AWAIT_SELECT_EDIT_EVENT -> {
+                if(update.hasCallbackQuery()) {
+                    execute(deleteKeyboard(
+                            update.getCallbackQuery().getMessage().getMessageId(), user.getUserChatId()));
+                    execute(transactionsHandler.getEditEventHandler().getEditHandler(user, updateText));
+                    return;
+                }
+                execute(unknown);
+            }
+            case AWAIT_EDIT_EVENT_NAME -> {
+                execute(transactionsHandler.getEditEventHandler().editEventName(updateText, user));
+            }
+            case AWAIT_EDIT_EVENT_DESCRIPTION -> {
+                execute(transactionsHandler.getEditEventHandler().editEventDescription(updateText, user));
+            }
+            case AWAIT_EDIT_EVENT_DATE -> {
+                execute(transactionsHandler.getEditEventHandler().editEventDate(updateText, user));
+                LocalDateTime actualDate = transactionsHandler
+                        .getEditEventHandler().getLastEvent().getEventDateTime();
+                if(!actualDate.equals(startEventDate)) {
+                    startEventDate = actualDate;
+                    transactionsHandler.getEventsHandler().setEventDateTime(updateText, user);
+                    editEventNotifications();
+                }
+            }
+            case AWAIT_SELECT_DELETE_EVENT -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.getStopEventHandler().stopEvent(user, updateText));
+                stopEventNotifications();
+            }
+            case AWAIT_ADD_COORDINATES -> {
+                execute(transactionsHandler.
+                        getAddCoordinatesHandler().setCoordinates(user, updateText));
+            }
+            case AWAIT_SELECT_ACTION_COORDINATE -> {
+                if(update.hasCallbackQuery()) {
+                    deleteKeyboardHasCallbackQuery(update, user);
+                    execute(transactionsHandler.
+                            getAddCoordinatesHandler().callbackDataHandler(user, updateText));
+                }
+            }
+            case AWAIT_ADD_COORDINATE_DESCRIPTION -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getAddCoordinatesHandler().getSaveDescriptionMessage(user, updateText));
+            }
+            case AWAIT_SELECT_DWARF_FOR_ADDED -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.getAddCoordinatesHandler()
+                        .getSaveDwarfMessage(user, updateText));
+            }
+            case AWAIT_SELECT_EDIT_COORDINATE -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.getEditCoordinatesHandler().
+                        selectCoordinate(user, updateText));
+            }
+            case AWAIT_SELECT_DELETE_COORDINATE -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getEditCoordinatesHandler().deleteCoordinate(user, updateText));
+            }
+            case AWAIT_SET_DWARF_NAME -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.getCreateDwarfHandler().saveNameMessage(user, updateText));
+            }
+            case AWAIT_DWARF_DESCRIPTION -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getCreateDwarfHandler().saveDescriptionMessage(user, updateText));
+            }
+            case AWAIT_EDIT_DWARF_NAME -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getCreateDwarfHandler().saveEditNameMessage(user, updateText));
+            }
+            case AWAIT_SELECT_DWARF_ACTION -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getCreateDwarfHandler().callbackQueryHandler(user, updateText));
+            }
+            case AWAIT_SELECT_EDIT_DWARF -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getEditDwarfHandler().editDwarfActions(user, updateText));
+            }
+            case AWAIT_SELECT_DELETE_DWARF -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getEditDwarfHandler().deleteDwarf(user, updateText));
+            }
+            case AWAIT_SELECT_COORDINATE_FOR_ADD_HINT -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getHintsHandler().addHintMessage(user, updateText));
+            }
+            case AWAIT_ADD_HINT -> {
+                execute(transactionsHandler.
+                        getHintsHandler().saveHintMessage(user, updateText));
+            }
+            case AWAIT_SELECT_EDIT_HINT -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getHintsHandler().selectEditHintMessage(user, updateText));
+            }
+            case AWAIT_EDIT_HINT -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getHintsHandler().editHint(user, updateText));
+            }
+            case AWAIT_DELETE_HINT -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.
+                        getHintsHandler().deleteHint(user, updateText));
+            }
+            case AWAIT_SELECT_USER_BAN -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.getBanHandler().banUserMessage(user, updateText));
+                execute(transactionsHandler.getBanHandler().sendMessageBanUser());
+            }
+            case AWAIT_SELECT_UNBLOCK_USER -> {
+                deleteKeyboardHasCallbackQuery(update, user);
+                execute(transactionsHandler.getBanHandler().unblockUserMessage(user, updateText));
+                execute(transactionsHandler.getBanHandler().sendMessageBanUser());
+            }
+            case AWAIT_ADD_COORDINATE_HINT ->  {
+                execute(transactionsHandler.
+                        getAddCoordinatesHandler().saveHintMessage(user, updateText));
+            }
+
             default -> defaultMessage(updateText, user.getUserChatId());
         }
     }
 
-    private void sendMessageToUser(String updateText, UserEntity user) throws TelegramApiException{
+    private void deleteKeyboardHasCallbackQuery(Update update, UserEntity user)
+    throws TelegramApiException {
+        if(update.hasCallbackQuery()) {
+            execute(deleteKeyboard(update.getCallbackQuery().getMessage().getMessageId(),
+                    user.getUserChatId()));
+        }
+    }
+
+    private void sendMessageToUser(String updateText, UserEntity user)
+            throws TelegramApiException{
         execute(transactionsHandler.getMessageToAdminHandler().sendAnswerToAdmin());
-        execute(transactionsHandler.getMessageToAdminHandler().sendMessageToUser(updateText, lastUserId, user));
+        execute(transactionsHandler.
+                getMessageToAdminHandler().sendMessageToUser(updateText, lastUserId, user));
     }
 
     private void sendMessagesToAdmin(String updateText, UserEntity user) throws TelegramApiException {
@@ -222,7 +411,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
             case "YES_2" -> execute(startHandler.getSecondWarning(user));
             case "NO_2" -> execute(startHandler.getPositiveWarning(user));
             case "YES_3", "NO_3" -> {
-                execute(startHandler.getBanMessage(updateText, user));
+                execute(startHandler.getBanMessage(user));
             }
             case "get_uniform" -> {
                 sendMessagesToAdmin("Ожидаю получение униформы", user);
@@ -256,7 +445,6 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
                 userRepository.save(user);
             }
             case "response_to_user" -> {
-                execute(deleteKeyboard(messageId, chatId));
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);
                 sendMessage.setText("Введите ответ на сообщение:");
@@ -289,6 +477,58 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
         });
     }
 
+    private void editEventNotifications() {
+        List<UserEntity> users = getUsersList();
+        users.forEach(u -> {
+            try {
+                execute(transactionsHandler.getEditEventHandler().getEditNotification(u));
+            } catch (TelegramApiException ex) {
+                log.error(ex.toString());
+            }
+        });
+    }
+
+    private void stopEventNotifications() {
+        List<UserEntity> users = getUsersList();
+        users.forEach(u -> {
+            try {
+                execute(transactionsHandler.getStopEventHandler().stopEventNotification(u));
+            } catch (TelegramApiException e) {
+                log.error(e.toString());
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void notificationScheduler() {
+        List<UserEntity> users = getUsersList();
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            if(LocalDateTime.now().isAfter(startEventDate)) {
+                if(!scheduledExecutorService.isShutdown()) {
+                    scheduledExecutorService.shutdown();
+                }
+                users.forEach(u -> {
+                    try {
+                        execute(transactionsHandler.getEventsHandler().getStartEventNotification(u));
+                    } catch (TelegramApiException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+                return;
+            }
+            users.forEach(u -> {
+                try {
+                    SendMessage sendMessage = transactionsHandler.getEventsHandler().getNotification(u);
+                    execute(sendMessage);
+                    BotLogger.info( sendMessage.getText(), u.getUserChatId() );
+                } catch (TelegramApiException e) {
+                    throw new RuntimeException(e);
+                }
+                interval = notificationsInterval();
+            });
+        }, 0, interval.period(), interval.timeUnit());
+    }
+
     private List<UserEntity> getUsersList() {
         Iterator<UserEntity> usersIterator = userRepository.findAll().iterator();
         return StreamSupport.
@@ -296,20 +536,36 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
                         spliteratorUnknownSize(usersIterator, Spliterator.ORDERED), false).toList();
     }
 
-    private void firstNotificationHandler(String updateText, UserEntity user) throws TelegramApiException {
+    private void firstNotificationHandler(String updateText, UserEntity user, Update update)
+            throws TelegramApiException {
+        execute(deleteKeyboard(update.getCallbackQuery().getMessage().getMessageId(), user.getUserChatId()));
         notificationDuration = updateText;
-        notificationsHandler();
-        isWaitingStartEvent = true;
+        startEventDate = transactionsHandler.getEventsHandler().getLastEvent().getEventDateTime();
+        interval = notificationsInterval();
         execute(transactionsHandler.getEventsHandler().saveNotifications(user));
+        notificationScheduler();
     }
 
-    private void notificationsHandler() {
+    public Interval notificationsInterval() {
         switch (notificationDuration) {
-            case "one_day" -> nextNotification = LocalDateTime.now().plusMinutes(1);
-            case "two_days" -> nextNotification = LocalDateTime.now().plusDays(2);
-            case "three_days" -> nextNotification = LocalDateTime.now().plusDays(3);
-            case "week" -> nextNotification = LocalDateTime.now().plusWeeks(1);
-            case "two_week" -> nextNotification = LocalDateTime.now().plusWeeks(2);
+            case "one_day" -> {
+                return new Interval(TimeUnit.DAYS, 1);
+            }
+            case "two_days" -> {
+                return new Interval(TimeUnit.DAYS, 2);
+            }
+            case "three_days" -> {
+                return new Interval(TimeUnit.DAYS, 3);
+            }
+            case "week" -> {
+                return new Interval(TimeUnit.DAYS, 7);
+            }
+            case "two_week" -> {
+                return new Interval(TimeUnit.DAYS, 14);
+            }
+            default -> {
+                return new Interval(TimeUnit.DAYS, 10);
+            }
          }
     }
 
@@ -337,7 +593,6 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
                     + " " + lastName);
         user.setUserChatId(chatId);
         user.setState(UserState.AWAIT_REGISTRATION);
-        userRepository.save(user);
         return user;
     }
 

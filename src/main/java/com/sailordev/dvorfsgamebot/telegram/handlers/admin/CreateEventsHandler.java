@@ -1,4 +1,4 @@
-package com.sailordev.dvorfsgamebot.telegram.handlers;
+package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.Event;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
@@ -14,22 +14,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
-import java.io.Serializable;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.List;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
-public class EventsHandler {
-    private static final Logger log = LoggerFactory.getLogger(EventsHandler.class);
+public class CreateEventsHandler {
+    private static final Logger log = LoggerFactory.getLogger(CreateEventsHandler.class);
     public Interval interval;
     @Autowired
     private EventRepository eventRepository;
@@ -214,4 +212,5 @@ public class EventsHandler {
         sendMessage.setParseMode("HTML");
         return sendMessage;
     }
+
 }

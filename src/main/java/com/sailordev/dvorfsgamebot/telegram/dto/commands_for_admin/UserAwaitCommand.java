@@ -34,21 +34,21 @@ public class UserAwaitCommand implements Command {
 
     @Override
     public SendMessage sendCommandMessage(UserEntity user) {
-        Iterable<UserEntity> iterable = userRepository.findAll();
-        Set<UserEntity> userSet = StreamSupport.stream(iterable.spliterator(), false)
-                .collect(Collectors.toSet());
-        StringBuilder stringBuilder = new StringBuilder();
-        List<InlineKeyboardButton> buttons = new ArrayList<>();
         SendMessage sendMessage = new SendMessage();
         String text = "";
         String chatId = user.getUserChatId();
-        if(userSet.isEmpty()){
+        Iterable<UserEntity> iterable = userRepository.findAll();
+        if(!iterable.iterator().hasNext()){
             text = "Пользователи, которые ждут вашего ответа, отсутствуют";
             sendMessage.setText(text);
             sendMessage.setChatId(chatId);
             BotLogger.info(text, chatId);
             return sendMessage;
         }
+        Set<UserEntity> userSet = StreamSupport.stream(iterable.spliterator(), false)
+                .collect(Collectors.toSet());
+        StringBuilder stringBuilder = new StringBuilder();
+        List<InlineKeyboardButton> buttons = new ArrayList<>();
         stringBuilder.append("<b>Список юзеров, которые ждут вашего ответа:</b>\n");
         for (UserEntity u : userSet) {
             if(u.getState().equals(UserState.AWAIT_ADMINS_RESPONSE)){

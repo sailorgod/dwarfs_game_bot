@@ -1,14 +1,17 @@
-package com.sailordev.dvorfsgamebot.telegram.handlers;
+package com.sailordev.dvorfsgamebot.telegram.handlers.user;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
 import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
+import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -19,7 +22,6 @@ public class MessageToAdminHandler {
     private final String adminChatId;
     private final SendMessage sendMessage = new SendMessage();
     private final UserRepository userRepository;
-    private UserEntity lastUser;
 
     public SendMessage sendMessageToAdmin(String updateText, UserEntity user) {
         String chatId = user.getUserChatId();
@@ -28,27 +30,36 @@ public class MessageToAdminHandler {
         sendMessage.setChatId(adminChatId);
         sendMessage.setText(text);
         sendMessage.setParseMode("HTML");
+        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+        inlineKeyboardButton.setText("Ответить");
+        inlineKeyboardButton.setCallbackData("answer_" + user.getId());
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        inlineKeyboardMarkup.setKeyboard(List.of(List.of(inlineKeyboardButton)));
+        sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         BotLogger.info(chatId, text);
         return sendMessage;
     }
 
-    public SendMessage sendMessageToUser(String updateText, String userId, UserEntity user) {
+    public SendMessage sendMessageToUser(String updateText, String userId, UserEntity admin) {
         String text = "";
-        String chatId = user.getUserChatId();
+        String chatId = admin.getUserChatId();
         Optional<UserEntity> userEntityOptional =
                 userRepository.findById(Integer.parseInt(userId));
         if(userEntityOptional.isEmpty()) {
             text = "Пользователь с таким id не найден";
-            sendMessage.setChatId(user.getUserChatId());
+            sendMessage.setChatId(admin.getUserChatId());
             sendMessage.setText(text);
             BotLogger.info(text, chatId);
             return sendMessage;
         }
         text = "<b>Новое сообщение от админа:</b> \n\n" + updateText;
         BotLogger.info(text.replace("</b>", ""), updateText);
-        sendMessage.setChatId(userEntityOptional.get().getUserChatId());
+        UserEntity user = userEntityOptional.get();
+        sendMessage.setChatId(user.getUserChatId());
         sendMessage.setText(text);
         sendMessage.setParseMode("HTML");
+        user.setState(UserState.SLEEP);
+        userRepository.save(user);
         return sendMessage;
     }
 
@@ -68,4 +79,5 @@ public class MessageToAdminHandler {
         BotLogger.info(text, chatId);
         return sendMessage;
     }
+
 }

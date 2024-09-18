@@ -4,9 +4,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public interface Keyboard {
 
@@ -14,14 +12,25 @@ public interface Keyboard {
 
     default ReplyKeyboardMarkup getKeyboard() {
         KeyboardRow keyboardRow = new KeyboardRow();
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
         HashMap<String, Command> commands = getCommandsHandler().getCommands();
-        for(Map.Entry<String, Command> entry : commands.entrySet()){
+        Collection<Command> commandCollection = commands.values();
+        List<Command> commandList = new ArrayList<>(commandCollection.stream().toList());
+        commandList.sort(Comparator.comparing(Command::getName));
+        for(Command command : commandList){
+            if(command.getName().equals("Старт")) {
+                continue;
+            }
             KeyboardButton keyboardButton = new KeyboardButton();
-            keyboardButton.setText(entry.getValue().getName());
+            keyboardButton.setText(command.getName());
             keyboardRow.add(keyboardButton);
+            if(keyboardRow.size() == 2) {
+                keyboardRows.add(keyboardRow);
+                keyboardRow = new KeyboardRow();
+            }
         }
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setKeyboard(List.of(keyboardRow));
+        replyKeyboardMarkup.setKeyboard(keyboardRows);
         replyKeyboardMarkup.setResizeKeyboard(true);
         replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setOneTimeKeyboard(false);

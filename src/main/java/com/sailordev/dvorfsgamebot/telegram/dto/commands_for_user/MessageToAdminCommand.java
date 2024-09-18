@@ -5,11 +5,10 @@ import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
-import com.sailordev.dvorfsgamebot.telegram.handlers.MessageToAdminHandler;
+import com.sailordev.dvorfsgamebot.telegram.handlers.user.MessageToAdminHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Update;
 
 @Component
 @RequiredArgsConstructor

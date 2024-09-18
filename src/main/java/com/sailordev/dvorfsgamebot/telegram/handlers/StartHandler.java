@@ -1,11 +1,13 @@
 package com.sailordev.dvorfsgamebot.telegram.handlers;
 
+import com.sailordev.dvorfsgamebot.model.Invite;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
 import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import com.sailordev.dvorfsgamebot.telegram.dto.keyboard.KeyboardForAdmin;
 import com.sailordev.dvorfsgamebot.telegram.dto.keyboard.KeyboardForUser;
 import com.sailordev.dvorfsgamebot.telegram.dto.keyboard.SelectKeyboard;
+import com.sailordev.dvorfsgamebot.telegram.handlers.user.InviteHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -23,6 +25,7 @@ public class StartHandler {
     private final UserRepository userRepository;
     private final KeyboardForUser keyboardForUser;
     private final KeyboardForAdmin keyboardForAdmin;
+    private final InviteHandler inviteHandler;
     private final SendMessage sendMessage = new SendMessage();
 
     public SendMessage getFirstWarning(UserEntity user) {
@@ -46,7 +49,7 @@ public class StartHandler {
         return sendMessage;
     }
 
-    public SendMessage getBanMessage(String callbackQuery, UserEntity user) {
+    public SendMessage getBanMessage(UserEntity user) {
         sendMessage.setChatId(user.getUserChatId());
         sendMessage.setText("Доступ закрыт.");
         sendMessage.setReplyMarkup(null);
@@ -57,8 +60,12 @@ public class StartHandler {
 
     public SendMessage wellComeMessageForAdmin(UserEntity user) {
         sendMessage.setChatId(user.getUserChatId());
-        sendMessage.setText("Добро пожаловать, повелитель");
+        sendMessage.setText("<b>Добро пожаловать, повелитель.</b>" +
+                "\nОбрати внимание, что на клавиатуре представлены не все твои возможности. " +
+                "Для просмотра всех возможных действий используй команду /help " +
+                "в выпадающем меню бота");
         sendMessage.setReplyMarkup(keyboardForAdmin.getKeyboard());
+        sendMessage.setParseMode("HTML");
         user.setState(UserState.SLEEP);
         userRepository.save(user);
         return sendMessage;
@@ -68,6 +75,8 @@ public class StartHandler {
         sendMessage.setChatId(user.getUserChatId());
         sendMessage.setText(WELL_COME_MESSAGE);
         sendMessage.setReplyMarkup(keyboardForUser.getKeyboard());
+        user.setInvite(inviteHandler.createInvite(user));
+        userRepository.save(user);
         return sendMessage;
     }
 

@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Entity
 @Getter
 public class UserEntity {
@@ -24,4 +26,7 @@ public class UserEntity {
     @Setter
     @Column(name = "last_message")
     private String lastMessage;
+    @OneToOne
+    @Setter
+    private Invite invite;
 }
