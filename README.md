@@ -5,4 +5,4 @@ Dwarf Game Bot
 Проект сделан по заказу моей знакомой. В дальнейшем планируется деплой телеграм бота на сервер. 
 Ссылку на бота для тестирования будет прикреплена после деплоя. 
 Стек технологий, который я использовал: 
-Java 17, Spring Boot, Spring Data JPA, PostgreSQL, Telegram Bot API.
+Java 17, Spring Boot, Spring Data JPA Spring Data Redis, PostgreSQL, Telegram Bot API, Redis.
