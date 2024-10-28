@@ -2,26 +2,24 @@ package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin;
 
 import com.sailordev.dvorfsgamebot.model.Event;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.EventRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 import java.util.Iterator;
-import java.util.Optional;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CreateEventCommand implements Command {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final EventRepository eventRepository;
     private static final String NAME = "Создать ивент";
     private static final String CREATE_EVENT_DESCRIPTION = "Создать новый ивент";
@@ -40,7 +38,7 @@ public class CreateEventCommand implements Command {
         }
         sendMessage.setChatId(chatId);
         user.setState(UserState.AWAIT_SET_EVENT_DATE);
-        userRepository.save(user);
+        userCacheService.save(user);
         text = "Отлично. Введите дату и время начала ивента в формате - дд.мм.гггг чч:мм";
         sendMessage.setText(text);
         BotLogger.info(text, chatId);

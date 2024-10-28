@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin;
 
 import com.sailordev.dvorfsgamebot.model.Event;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.EventRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
@@ -21,7 +21,7 @@ import java.util.stream.StreamSupport;
 public class StopEventCommand implements Command {
 
     private final EventRepository eventRepository;
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
 
     @Override
     public SendMessage sendCommandMessage(UserEntity user) {
@@ -41,7 +41,7 @@ public class StopEventCommand implements Command {
         sendMessage.setText(text);
         sendMessage.setReplyMarkup(stopEventKeyboard(eventIterator));
         user.setState(UserState.AWAIT_SELECT_DELETE_EVENT);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

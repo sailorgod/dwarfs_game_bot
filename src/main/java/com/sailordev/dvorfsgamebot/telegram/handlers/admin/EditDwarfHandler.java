@@ -2,11 +2,10 @@ package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.Dwarf;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.DwarfsRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
-import com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin.CreateDwarfCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -17,7 +16,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class EditDwarfHandler {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final DwarfsRepository dwarfsRepository;
     private final CreateDwarfHandler createDwarfHandler;
 
@@ -48,7 +47,7 @@ public class EditDwarfHandler {
         sendMessage.setReplyMarkup(createDwarfHandler.getSelectKeyboard());
         sendMessage.setParseMode("HTML");
         user.setState(UserState.AWAIT_SELECT_DWARF_ACTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }
@@ -76,7 +75,7 @@ public class EditDwarfHandler {
         sendMessage.setText(text);
         dwarfsRepository.delete(dwarf);
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 }

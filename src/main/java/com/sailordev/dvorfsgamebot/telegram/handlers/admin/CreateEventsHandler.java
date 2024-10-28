@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.Event;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.EventRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Interval;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
@@ -32,7 +32,7 @@ public class CreateEventsHandler {
     @Autowired
     private EventRepository eventRepository;
     @Autowired
-    private UserRepository userRepository;
+    private UserCacheService userCacheService;
     @Getter
     private Event lastEvent;
 
@@ -55,7 +55,7 @@ public class CreateEventsHandler {
             lastEvent.setEventDateTime(eventTime);
             eventRepository.save(lastEvent);
             user.setState(UserState.AWAIT_SET_NAME_OR_DESCRIPTION_EVENT);
-            userRepository.save(user);
+            userCacheService.save(user);
             text = "Желаете назначить имя или описание для ивента?";
             sendMessage.setText(text);
             sendMessage.setChatId(chatId);
@@ -77,7 +77,7 @@ public class CreateEventsHandler {
         sendMessage.setText("Введите название для текущего ивента:");
         sendMessage.setChatId(user.getUserChatId());
         user.setState(UserState.AWAIT_EVENT_SET_NAME);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -86,7 +86,7 @@ public class CreateEventsHandler {
         sendMessage.setText("Введите описание текущего ивента:");
         sendMessage.setChatId(user.getUserChatId());
         user.setState(UserState.AWAIT_EVENT_SET_DESCRIPTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -107,7 +107,7 @@ public class CreateEventsHandler {
         inlineKeyboardMarkup.setKeyboard(List.of(List.of(button1, button2)));
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         user.setState(UserState.AWAIT_SET_NAME_OR_DESCRIPTION_EVENT);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -118,7 +118,7 @@ public class CreateEventsHandler {
         user.setState(UserState.AWAIT_SET_NOTIFICATION_TIME);
         InlineKeyboardMarkup inlineKeyboardMarkup = getIntervalsKeyboard();
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -144,7 +144,7 @@ public class CreateEventsHandler {
         sendMessage.setText("Интервал оповещений сохранен");
         sendMessage.setChatId(user.getUserChatId());
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

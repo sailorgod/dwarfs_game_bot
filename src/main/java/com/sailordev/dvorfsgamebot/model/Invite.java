@@ -1,5 +1,6 @@
 package com.sailordev.dvorfsgamebot.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,6 +12,7 @@ public class Invite {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
+    @JsonIgnore
     @OneToOne
     @JoinColumn(name = "user_id")
     @Setter

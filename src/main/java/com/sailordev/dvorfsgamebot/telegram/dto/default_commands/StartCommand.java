@@ -1,30 +1,23 @@
 package com.sailordev.dvorfsgamebot.telegram.dto.default_commands;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.configs.AdminUserProperty;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
-import com.sailordev.dvorfsgamebot.telegram.dto.Keyboard;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
-import com.sailordev.dvorfsgamebot.telegram.dto.keyboard.KeyboardForAdmin;
-import com.sailordev.dvorfsgamebot.telegram.dto.keyboard.KeyboardForUser;
 import com.sailordev.dvorfsgamebot.telegram.dto.keyboard.SelectKeyboard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class StartCommand implements Command {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final AdminUserProperty adminUserProperty;
     private static final String NAME = "Старт";
     private static final String START_DESCRIPTION = "Начать игру заново";
@@ -46,7 +39,7 @@ public class StartCommand implements Command {
             sendMessage.setReplyMarkup(SelectKeyboard.getKeyboard(1, 1));
             user.setState(UserState.AWAIT_START);
         }
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }

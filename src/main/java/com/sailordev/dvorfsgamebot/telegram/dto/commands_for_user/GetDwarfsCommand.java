@@ -42,12 +42,14 @@ public class GetDwarfsCommand implements Command {
         dwarves.forEach(d -> {
             String desc = ". Об этом гноме ничего не известно";
             if(d.getDescription() != null) {
-                desc = ". Описание гнома:\n" + d.getDescription();
+                desc = "\nОписание гнома:\n" + d.getDescription();
             }
-            builder.append("\n\uD83E\uDDDD").append(d.getName()).append(desc).append("\n");
+            builder.append("<b>\uD83E\uDDDD").append(" - ").
+                    append(d.getName()).append("</b>").append(desc).append("\n");
         });
         text = builder.toString();
         sendMessage.setText(text);
+        sendMessage.setParseMode("HTML");
         BotLogger.info(text, chatId);
         return sendMessage;
     }

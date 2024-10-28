@@ -1,21 +1,18 @@
 package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,7 +22,7 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class UserAwaitCommand implements Command {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private static final String USER_AWAIT_DESCRIPTION = "Выводит список пользователей, " +
             "которые ждут вашего ответа";
     private static final String NAME = "Ответ пользователям";
@@ -37,16 +34,18 @@ public class UserAwaitCommand implements Command {
         SendMessage sendMessage = new SendMessage();
         String text = "";
         String chatId = user.getUserChatId();
-        Iterable<UserEntity> iterable = userRepository.findAll();
-        if(!iterable.iterator().hasNext()){
+        Iterable<UserEntity> iterable = userCacheService.findAll();
+        Set<UserEntity> userSet = StreamSupport.stream(iterable.spliterator(), false)
+                .collect(Collectors.toSet());
+        int userCount = (int) userSet.stream().
+                filter(u -> u.getState().equals(UserState.AWAIT_ADMINS_RESPONSE)).count();
+        if(userCount == 0){
             text = "Пользователи, которые ждут вашего ответа, отсутствуют";
             sendMessage.setText(text);
             sendMessage.setChatId(chatId);
             BotLogger.info(text, chatId);
             return sendMessage;
         }
-        Set<UserEntity> userSet = StreamSupport.stream(iterable.spliterator(), false)
-                .collect(Collectors.toSet());
         StringBuilder stringBuilder = new StringBuilder();
         List<InlineKeyboardButton> buttons = new ArrayList<>();
         stringBuilder.append("<b>Список юзеров, которые ждут вашего ответа:</b>\n");
@@ -73,7 +72,7 @@ public class UserAwaitCommand implements Command {
         sendMessage.setReplyMarkup(lastMarkup);
         user.setState(UserState.AWAIT_USER_SELECTION);
         BotLogger.info(text, chatId);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

@@ -1,7 +1,7 @@
 package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class BanHandler {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private UserEntity lastUser;
 
     public SendMessage banUserMessage(UserEntity user, String updateText) {
@@ -35,7 +35,7 @@ public class BanHandler {
             BotLogger.info(text, chatId);
             return sendMessage;
         }
-        Optional<UserEntity> optionalUser = userRepository.findById(Integer.parseInt(updateText));
+        Optional<UserEntity> optionalUser = userCacheService.findById(Integer.parseInt(updateText));
         if(optionalUser.isEmpty()) {
             text = "Пользователь с таким id не найден. Попробуйте снова";
             sendMessage.setText(text);
@@ -44,10 +44,10 @@ public class BanHandler {
         }
         lastUser = optionalUser.get();
         lastUser.setState(state);
-        userRepository.save(lastUser);
+        userCacheService.save(lastUser);
         sendMessage.setText("Пользователь " + lastUser.getUserName() + text);
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -61,6 +61,23 @@ public class BanHandler {
             text = "Доступ восстановлен, добро пожаловать :)";
         }
         sendMessage.setText(text);
+        return sendMessage;
+    }
+
+    public SendMessage sendMessageBanUserAfterWarn(UserEntity user) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(user.getUserChatId());
+        sendMessage.setText("Вы заблокированы за спам.");
+        return sendMessage;
+    }
+
+    public SendMessage sendBanWarning(UserEntity user) {
+        String tryCount = String.valueOf(4 - user.getWarnCount());
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(user.getUserChatId());
+        sendMessage.setText("Слишком частое обращение ко мне. " +
+                "Предупреждаю, спам чреват блокировкой. Осталось попыток: "
+                + tryCount);
         return sendMessage;
     }
 }

@@ -1,7 +1,7 @@
 package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
@@ -18,7 +18,7 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class UnblockCommand implements Command {
 
-   private final UserRepository userRepository;
+   private final UserCacheService userCacheService;
 
     @Override
     public SendMessage sendCommandMessage(UserEntity user) {
@@ -26,7 +26,7 @@ public class UnblockCommand implements Command {
         String text = "";
         String chatId = user.getUserChatId();
         sendMessage.setChatId(chatId);
-        Iterator<UserEntity> userIterator = userRepository.findAll().iterator();
+        Iterator<UserEntity> userIterator = userCacheService.findAll().iterator();
         if(!userIterator.hasNext()) {
             text = "Список пользователей пуст.";
             sendMessage.setText(text);
@@ -58,7 +58,7 @@ public class UnblockCommand implements Command {
         sendMessage.setText(builder.toString());
         sendMessage.setReplyMarkup(keyboardMarkup);
         user.setState(UserState.AWAIT_SELECT_UNBLOCK_USER);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

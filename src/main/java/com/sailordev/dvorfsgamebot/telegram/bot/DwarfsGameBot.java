@@ -1,7 +1,7 @@
 package com.sailordev.dvorfsgamebot.telegram.bot;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.dto.*;
 import com.sailordev.dvorfsgamebot.telegram.handlers.*;
 import lombok.Getter;
@@ -11,14 +11,13 @@ import org.springframework.stereotype.Component;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-;
+
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -33,7 +32,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
 
     @Getter
     private final TransactionsHandler transactionsHandler;
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final ScheduledExecutorService scheduledExecutorService
             = Executors.newScheduledThreadPool(1);
     private Interval interval;
@@ -49,6 +48,24 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
             UserEntity user = getUser(chatId, update.getMessage().getChat());
             if(user.getState().equals(UserState.BAN)) {
                 return;
+            }
+            if(LocalDateTime.now().isAfter(
+                    user.getLastMessageTime().plusSeconds(2))){
+                try{
+                    if(user.getWarnCount() == 4) {
+                        user.setState(UserState.BAN);
+                        userCacheService.save(user);
+                        execute(transactionsHandler
+                                .getBanHandler().sendMessageBanUserAfterWarn(user));
+                        return;
+                    }
+                    user.setWarnCount(user.getWarnCount() + 1);
+                    userCacheService.save(user);
+                    execute(transactionsHandler.getBanHandler().sendBanWarning(user));
+                    return;
+                } catch (TelegramApiException e) {
+                    log.error(e.toString());
+                }
             }
             if(updateText != null && updateText.startsWith("/start") && updateText
                     .replace("/start", "").trim().matches("[0-9]+")){
@@ -172,7 +189,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
                             getAdminUserProperty().getChatId());
                     sendMessage.setText("Введите ответ на сообщение:");
                     user.setState(UserState.AWAIT_RESPONSE_TO_USER);
-                    userRepository.save(user);
+                    userCacheService.save(user);
                     execute(sendMessage);
                 }
             }
@@ -183,7 +200,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
                 }
                 //TODO: Исправить в дальнейшем на другое решение команды start
                 user.setState(UserState.SLEEP);
-                userRepository.save(user);
+                userCacheService.save(user);
                 onUpdateReceived(update);
             }
             case AWAIT_USER_SELECTION -> {
@@ -206,7 +223,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
             }
             case AWAIT_RESPONSE_TO_USER -> {
                 user.setState(UserState.SLEEP);
-                userRepository.save(user);
+                userCacheService.save(user);
                 sendMessageToUser(updateText, user);
             }
             case AWAIT_SET_EVENT_DATE -> {
@@ -388,7 +405,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
     private void sendMessagesToAdmin(String updateText, UserEntity user) throws TelegramApiException {
         user.setState(UserState.AWAIT_ADMINS_RESPONSE);
         user.setLastMessage(updateText);
-        userRepository.save(user);
+        userCacheService.save(user);
         execute(transactionsHandler.getMessageToAdminHandler().sendAnswerToUser(user));
         execute(transactionsHandler.getMessageToAdminHandler().
                 sendMessageToAdmin(updateText, user));
@@ -416,7 +433,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
             case "get_uniform" -> {
                 sendMessagesToAdmin("Ожидаю получение униформы", user);
                 user.setState(UserState.AWAIT_ADMINS_RESPONSE);
-                userRepository.save(user);
+                userCacheService.save(user);
             }
         }
     }
@@ -442,14 +459,14 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
                 execute(sendMessage);
                 execute(new DeleteMessage(chatId, messageId));
                 user.setState(UserState.AWAIT_USER_SELECTION);
-                userRepository.save(user);
+                userCacheService.save(user);
             }
             case "response_to_user" -> {
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);
                 sendMessage.setText("Введите ответ на сообщение:");
                 user.setState(UserState.AWAIT_RESPONSE_TO_USER);
-                userRepository.save(user);
+                userCacheService.save(user);
                 execute(sendMessage);
             }
             case "set_event_name" -> {
@@ -530,7 +547,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
     }
 
     private List<UserEntity> getUsersList() {
-        Iterator<UserEntity> usersIterator = userRepository.findAll().iterator();
+        Iterator<UserEntity> usersIterator = userCacheService.findAll().iterator();
         return StreamSupport.
                 stream(Spliterators.
                         spliteratorUnknownSize(usersIterator, Spliterator.ORDERED), false).toList();
@@ -580,7 +597,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
     }
 
     private UserEntity getUser(String chatId, Chat chat) {
-        Optional<UserEntity> optional = userRepository.findByUserChatId(chatId);
+        Optional<UserEntity> optional = userCacheService.findByUserChatId(chatId);
         if (optional.isPresent()){
             return optional.get();
         }
@@ -593,6 +610,7 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
                     + " " + lastName);
         user.setUserChatId(chatId);
         user.setState(UserState.AWAIT_REGISTRATION);
+        user.setLastMessageTime(LocalDateTime.now());
         return user;
     }
 

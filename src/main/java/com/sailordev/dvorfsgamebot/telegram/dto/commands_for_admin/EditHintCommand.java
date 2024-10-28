@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin;
 
 import com.sailordev.dvorfsgamebot.model.Hint;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.HintsRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
@@ -20,7 +20,7 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class EditHintCommand implements Command {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final HintsRepository hintsRepository;
 
     @Override
@@ -54,7 +54,7 @@ public class EditHintCommand implements Command {
         sendMessage.setText(text);
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         user.setState(UserState.AWAIT_SELECT_EDIT_HINT);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

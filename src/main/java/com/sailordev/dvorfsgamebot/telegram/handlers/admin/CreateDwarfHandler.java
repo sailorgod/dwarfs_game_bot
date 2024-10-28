@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.Dwarf;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.DwarfsRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CreateDwarfHandler {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final DwarfsRepository dwarfsRepository;
     @Setter
     private Dwarf lastDwarf;
@@ -32,7 +32,7 @@ public class CreateDwarfHandler {
         lastDwarf = dwarf;
         dwarfsRepository.save(dwarf);
         user.setState(UserState.AWAIT_SELECT_DWARF_ACTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         String text = "Имя гнома успешно сохранено. Хотите ещё что-то добавить или изменить?\n\n";
         text += getLastDwarf();
         sendMessage.setChatId(chatId);
@@ -47,7 +47,7 @@ public class CreateDwarfHandler {
         SendMessage sendMessage = new SendMessage();
         String chatId = user.getUserChatId();
         user.setState(UserState.AWAIT_DWARF_DESCRIPTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         String text = "Введите описание гнома.";
         sendMessage.setChatId(chatId);
         sendMessage.setText(text);
@@ -67,7 +67,7 @@ public class CreateDwarfHandler {
         sendMessage.setReplyMarkup(getSelectKeyboard());
         sendMessage.setParseMode("HTML");
         user.setState(UserState.AWAIT_SELECT_DWARF_ACTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }
@@ -81,7 +81,7 @@ public class CreateDwarfHandler {
         sendMessage.setChatId(chatId);
         sendMessage.setParseMode("HTML");
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }
@@ -90,7 +90,7 @@ public class CreateDwarfHandler {
         String text = "Введите новое имя для гнома";
         SendMessage sendMessage = getSendMessage(user, text);
         user.setState(UserState.AWAIT_EDIT_DWARF_NAME);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -106,7 +106,7 @@ public class CreateDwarfHandler {
         lastDwarf.setName(updateText);
         dwarfsRepository.save(lastDwarf);
         user.setState(UserState.AWAIT_SELECT_DWARF_ACTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

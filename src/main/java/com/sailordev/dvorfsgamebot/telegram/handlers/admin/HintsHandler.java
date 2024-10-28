@@ -3,9 +3,9 @@ package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 import com.sailordev.dvorfsgamebot.model.Coordinates;
 import com.sailordev.dvorfsgamebot.model.Hint;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.CoordinatesRepository;
 import com.sailordev.dvorfsgamebot.repositories.HintsRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class HintsHandler {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final HintsRepository hintsRepository;
     private final CoordinatesRepository coordinatesRepository;
     private Coordinates lastCoordinate;
@@ -66,7 +66,7 @@ public class HintsHandler {
         text = "Введите подсказку для данной координаты:";
         sendMessage.setText(text);
         user.setState(UserState.AWAIT_ADD_HINT);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }
@@ -93,7 +93,7 @@ public class HintsHandler {
         text = "Введите новое описание для данной подсказки:";
         sendMessage.setText(text);
         user.setState(UserState.AWAIT_EDIT_HINT);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }
@@ -126,7 +126,7 @@ public class HintsHandler {
         text = "Подсказка удалена.";
         hintsRepository.delete(hintOptional.get());
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         sendMessage.setText(text);
         BotLogger.info(text, chatId);
         return sendMessage;
@@ -139,7 +139,7 @@ public class HintsHandler {
         sendMessage.setChatId(chatId);
         sendMessage.setParseMode("HTML");
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }

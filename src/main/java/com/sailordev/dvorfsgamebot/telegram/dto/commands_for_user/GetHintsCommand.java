@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_user;
 
 import com.sailordev.dvorfsgamebot.model.Invite;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.InviteRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
@@ -21,7 +21,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class GetHintsCommand implements Command {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final InviteRepository inviteRepository;
 
     @Transactional
@@ -48,7 +48,7 @@ public class GetHintsCommand implements Command {
             sendMessage.setReplyMarkup(inlineKeyboardMarkup);
             sendMessage.setParseMode("HTML");
             user.setState(UserState.AWAIT_SELECT_ACTION_HINT);
-            userRepository.save(user);
+            userCacheService.save(user);
             return sendMessage;
         }
         text = "<b>Пригласи друга для получения подсказок.</b>\n" +

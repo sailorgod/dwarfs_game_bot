@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.Event;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.EventRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import java.util.Optional;
 public class StopEventHandler {
 
     private final EventRepository eventRepository;
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
 
     public SendMessage stopEvent(UserEntity user, String updateText) {
         SendMessage sendMessage = new SendMessage();
@@ -41,7 +41,7 @@ public class StopEventHandler {
         sendMessage.setText(text);
         eventRepository.deleteById(eventId);
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

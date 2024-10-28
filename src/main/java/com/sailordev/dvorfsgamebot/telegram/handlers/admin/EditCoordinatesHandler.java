@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.Coordinates;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.CoordinatesRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import java.util.Optional;
 public class EditCoordinatesHandler {
 
     private final CoordinatesRepository coordinatesRepository;
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final AddCoordinatesHandler addCoordinatesHandler;
 
     public SendMessage selectCoordinate(UserEntity user, String updateText) {
@@ -47,7 +47,7 @@ public class EditCoordinatesHandler {
         sendMessage.setText(text);
         sendMessage.setReplyMarkup(addCoordinatesHandler.getSelectKeyboard());
         user.setState(UserState.AWAIT_SELECT_ACTION_COORDINATE);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -78,7 +78,7 @@ public class EditCoordinatesHandler {
         coordinatesRepository.delete(coordinates);
         sendMessage.setText(text);
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

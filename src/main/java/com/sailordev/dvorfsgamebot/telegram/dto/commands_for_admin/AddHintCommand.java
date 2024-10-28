@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin;
 
 import com.sailordev.dvorfsgamebot.model.Coordinates;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.CoordinatesRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
@@ -20,7 +20,7 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class AddHintCommand implements Command {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final CoordinatesRepository coordinatesRepository;
 
     @Override
@@ -56,7 +56,7 @@ public class AddHintCommand implements Command {
         sendMessage.setText(text);
         sendMessage.setReplyMarkup(keyboardMarkup);
         user.setState(UserState.AWAIT_SELECT_COORDINATE_FOR_ADD_HINT);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }

@@ -4,10 +4,10 @@ import com.sailordev.dvorfsgamebot.model.Coordinates;
 import com.sailordev.dvorfsgamebot.model.Dwarf;
 import com.sailordev.dvorfsgamebot.model.Hint;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.CoordinatesRepository;
 import com.sailordev.dvorfsgamebot.repositories.DwarfsRepository;
 import com.sailordev.dvorfsgamebot.repositories.HintsRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import jakarta.transaction.Transactional;
@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendSticker;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -28,7 +27,7 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class AddCoordinatesHandler {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final CoordinatesRepository coordinatesRepository;
     private final DwarfsRepository dwarfsRepository;
     private final HintsRepository hintsRepository;
@@ -61,7 +60,7 @@ public class AddCoordinatesHandler {
         sendMessage.setParseMode("HTML");
         BotLogger.info(text, chatId);
         user.setState(UserState.AWAIT_SELECT_ACTION_COORDINATE);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -71,7 +70,7 @@ public class AddCoordinatesHandler {
         String text = "Описание сохранено. Желаете ещё что-то добавить или изменить?\n\n";
         text += getLastCoordinate();
         user.setState(UserState.AWAIT_SELECT_ACTION_COORDINATE);
-        userRepository.save(user);
+        userCacheService.save(user);
         return getMessage(user, text);
     }
 
@@ -106,7 +105,7 @@ public class AddCoordinatesHandler {
         text = "Тип гнома сохранен. Желаете ещё что-то добавить или изменить?\n\n";
         text += getLastCoordinate();
         user.setState(UserState.AWAIT_SELECT_ACTION_COORDINATE);
-        userRepository.save(user);
+        userCacheService.save(user);
         return getMessage(user, text);
     }
 
@@ -129,7 +128,7 @@ public class AddCoordinatesHandler {
         sendMessage.setChatId(chatId);
         BotLogger.info(text, chatId);
         user.setState(UserState.AWAIT_ADD_COORDINATE_DESCRIPTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -166,7 +165,7 @@ public class AddCoordinatesHandler {
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         BotLogger.info(stringBuilder.toString(), chatId);
         user.setState(UserState.AWAIT_SELECT_DWARF_FOR_ADDED);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
@@ -202,7 +201,7 @@ public class AddCoordinatesHandler {
         sendMessage.setChatId(chatId);
         sendMessage.setText(text);
         user.setState(UserState.AWAIT_ADD_COORDINATE_HINT);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }
@@ -224,7 +223,7 @@ public class AddCoordinatesHandler {
         hintsRepository.save(hint);
         coordinatesRepository.save(lastCoordinate);
         user.setState(UserState.AWAIT_SELECT_ACTION_COORDINATE);
-        userRepository.save(user);
+        userCacheService.save(user);
         String text = "Подсказка для данной координаты сохранена:\n"
                 + getLastCoordinate() +
                 "\nЖелаете ещё что-то добавить или изменить?\n\n";

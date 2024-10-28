@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.Dwarf;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.DwarfsRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import java.util.stream.StreamSupport;
 public class SelectDwarfsHandler {
 
     private final DwarfsRepository dwarfsRepository;
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
 
     public SendMessage getDwarfsMessage(UserEntity user, UserState state){
         SendMessage sendMessage = new SendMessage();
@@ -54,7 +54,7 @@ public class SelectDwarfsHandler {
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         BotLogger.info(text, chatId);
         user.setState(state);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 }

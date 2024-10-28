@@ -1,7 +1,7 @@
 package com.sailordev.dvorfsgamebot.telegram.handlers.user;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +20,10 @@ import java.util.Optional;
 public class MessageToAdminHandler {
 
     private final String adminChatId;
-    private final SendMessage sendMessage = new SendMessage();
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
 
     public SendMessage sendMessageToAdmin(String updateText, UserEntity user) {
+        SendMessage sendMessage = new SendMessage();
         String chatId = user.getUserChatId();
         String text = "<b>Получено новое сообщение от</b> " + user.getUserName() + "\n\n" +
                 updateText;
@@ -41,10 +41,11 @@ public class MessageToAdminHandler {
     }
 
     public SendMessage sendMessageToUser(String updateText, String userId, UserEntity admin) {
+        SendMessage sendMessage = new SendMessage();
         String text = "";
         String chatId = admin.getUserChatId();
         Optional<UserEntity> userEntityOptional =
-                userRepository.findById(Integer.parseInt(userId));
+                userCacheService.findById(Integer.parseInt(userId));
         if(userEntityOptional.isEmpty()) {
             text = "Пользователь с таким id не найден";
             sendMessage.setChatId(admin.getUserChatId());
@@ -59,11 +60,12 @@ public class MessageToAdminHandler {
         sendMessage.setText(text);
         sendMessage.setParseMode("HTML");
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 
     public SendMessage sendAnswerToAdmin(){
+        SendMessage sendMessage = new SendMessage();
         String text = "Ваш ответ отправлен, повелитель";
         sendMessage.setChatId(adminChatId);
         sendMessage.setText(text);
@@ -72,6 +74,7 @@ public class MessageToAdminHandler {
     }
 
     public SendMessage sendAnswerToUser(UserEntity user) {
+        SendMessage sendMessage = new SendMessage();
         String text = "Ваше сообщение отправлено, дождитесь ответа администратора";
         String chatId = user.getUserChatId();
         sendMessage.setChatId(chatId);

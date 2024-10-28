@@ -1,7 +1,7 @@
 package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class LastMessageHandler {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final SendMessage sendMessage = new SendMessage();
 
     public SendMessage getLastUserMessage(String updateText, UserEntity user) {
@@ -31,7 +31,7 @@ public class LastMessageHandler {
             BotLogger.info(text, chatId);
             return sendMessage;
         }
-        Optional<UserEntity> optional = userRepository.findById(Integer.parseInt(updateText));
+        Optional<UserEntity> optional = userCacheService.findById(Integer.parseInt(updateText));
         SendMessage sendMessage = new SendMessage();
         if(optional.isEmpty() || !optional.get().getState().equals(UserState.AWAIT_ADMINS_RESPONSE)) {
             text = "Пользователь с таким айди не найден или не ожидает вашего ответа";
@@ -50,7 +50,7 @@ public class LastMessageHandler {
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
 
         user.setState(UserState.AWAIT_SELECT_ACTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

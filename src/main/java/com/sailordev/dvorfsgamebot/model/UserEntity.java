@@ -1,11 +1,12 @@
 package com.sailordev.dvorfsgamebot.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -26,6 +27,13 @@ public class UserEntity {
     @Setter
     @Column(name = "last_message")
     private String lastMessage;
+    @Setter
+    @Column(name = "last_message_time")
+    private LocalDateTime lastMessageTime;
+    @Setter
+    @Column(name = "warn_count")
+    private int warnCount;
+    @JsonIgnore
     @OneToOne
     @Setter
     private Invite invite;

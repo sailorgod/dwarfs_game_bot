@@ -2,8 +2,8 @@ package com.sailordev.dvorfsgamebot.telegram.handlers.admin;
 
 import com.sailordev.dvorfsgamebot.model.Event;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.EventRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import lombok.Getter;
@@ -25,7 +25,7 @@ import java.util.*;
 public class EditEventHandler {
 
     private final EventRepository eventRepository;
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     @Getter
     private Event lastEvent;
 
@@ -94,7 +94,7 @@ public class EditEventHandler {
 
     public SendMessage editMessage(String text, UserEntity user) {
         user.setState(UserState.AWAIT_SELECT_EDIT_EVENT);
-        userRepository.save(user);
+        userCacheService.save(user);
         SendMessage sendMessage = new SendMessage();
         String chatId = user.getUserChatId();
         sendMessage.setChatId(chatId);
@@ -108,21 +108,21 @@ public class EditEventHandler {
     public SendMessage messageEditName(UserEntity user) {
         String text = "Введите новое имя для ивента";
         user.setState(UserState.AWAIT_EDIT_EVENT_NAME);
-        userRepository.save(user);
+        userCacheService.save(user);
         return getSendMessage(user, text);
     }
 
     public SendMessage messageEditDescription(UserEntity user) {
         String text = "Введите новое описание для ивента";
         user.setState(UserState.AWAIT_EDIT_EVENT_DESCRIPTION);
-        userRepository.save(user);
+        userCacheService.save(user);
         return getSendMessage(user, text);
     }
 
     public SendMessage messageEditDate(UserEntity user) {
         String text = "Введите новую дату старта в формате дд.мм.гггг чч:мм";
         user.setState(UserState.AWAIT_EDIT_EVENT_DATE);
-        userRepository.save(user);
+        userCacheService.save(user);
         return getSendMessage(user, text);
     }
 
@@ -154,7 +154,7 @@ public class EditEventHandler {
         sendMessage.setChatId(user.getUserChatId());
         sendMessage.setText("Отменено");
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

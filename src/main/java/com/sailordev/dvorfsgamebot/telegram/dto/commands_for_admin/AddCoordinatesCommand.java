@@ -1,7 +1,7 @@
 package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_admin;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
@@ -13,7 +13,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 @RequiredArgsConstructor
 public class AddCoordinatesCommand implements Command {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
 
     @Override
     public SendMessage sendCommandMessage(UserEntity user) {
@@ -24,7 +24,7 @@ public class AddCoordinatesCommand implements Command {
         sendMessage.setChatId(chatId);
         BotLogger.info(text, chatId);
         user.setState(UserState.AWAIT_ADD_COORDINATES);
-        userRepository.save(user);
+        userCacheService.save(user);
         return sendMessage;
     }
 

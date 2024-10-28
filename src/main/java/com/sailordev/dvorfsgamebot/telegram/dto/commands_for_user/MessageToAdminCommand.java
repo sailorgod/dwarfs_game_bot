@@ -1,7 +1,7 @@
 package com.sailordev.dvorfsgamebot.telegram.dto.commands_for_user;
 
 import com.sailordev.dvorfsgamebot.model.UserEntity;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.Command;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
@@ -14,7 +14,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 @RequiredArgsConstructor
 public class MessageToAdminCommand implements Command {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final MessageToAdminHandler messageToAdminHandler;
     private static final String MESSAGE_TO_ADMIN_DESCRIPTION = "Связь с администратором";
 
@@ -28,7 +28,7 @@ public class MessageToAdminCommand implements Command {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
         user.setState(UserState.AWAIT_MESSAGE_TO_ADMIN);
-        userRepository.save(user);
+        userCacheService.save(user);
         sendMessage.setText(text);
         BotLogger.info(text, chatId);
         return sendMessage;

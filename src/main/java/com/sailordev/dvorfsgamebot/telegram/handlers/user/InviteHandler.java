@@ -4,10 +4,9 @@ import com.sailordev.dvorfsgamebot.model.Coordinates;
 import com.sailordev.dvorfsgamebot.model.Hint;
 import com.sailordev.dvorfsgamebot.model.Invite;
 import com.sailordev.dvorfsgamebot.model.UserEntity;
+import com.sailordev.dvorfsgamebot.redis.UserCacheService;
 import com.sailordev.dvorfsgamebot.repositories.CoordinatesRepository;
-import com.sailordev.dvorfsgamebot.repositories.HintsRepository;
 import com.sailordev.dvorfsgamebot.repositories.InviteRepository;
-import com.sailordev.dvorfsgamebot.repositories.UserRepository;
 import com.sailordev.dvorfsgamebot.telegram.dto.BotLogger;
 import com.sailordev.dvorfsgamebot.telegram.dto.UserState;
 import com.sailordev.dvorfsgamebot.telegram.dto.keyboard.KeyboardForUser;
@@ -25,7 +24,7 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class InviteHandler {
 
-    private final UserRepository userRepository;
+    private final UserCacheService userCacheService;
     private final InviteRepository inviteRepository;
     private final CoordinatesRepository coordinatesRepository;
     private final KeyboardForUser keyboardForUser;
@@ -49,7 +48,7 @@ public class InviteHandler {
         SendMessage sendMessage = new SendMessage();
         String chatId = updateText.replace("/start", "").trim();
         String text = "";
-        Optional<UserEntity> userFalseOptional = userRepository.findByUserChatId(user.getUserChatId());
+        Optional<UserEntity> userFalseOptional = userCacheService.findByUserChatId(user.getUserChatId());
         if(userFalseOptional.isPresent()) {
             isFalseUser = true;
             text = "Подсказки можно получить только за новых пользователей ;)";
@@ -59,7 +58,7 @@ public class InviteHandler {
             BotLogger.info(text, chatId);
             return sendMessage;
         }
-        Optional<UserEntity> userOptional = userRepository.findByUserChatId(chatId);
+        Optional<UserEntity> userOptional = userCacheService.findByUserChatId(chatId);
         if(userOptional.isEmpty()) {
             chatId = user.getUserChatId();
             text = "Прошу прощения, у меня не вышло найти пользователя, который вас пригласил. " +
@@ -67,7 +66,7 @@ public class InviteHandler {
             sendMessage.setText(text);
             sendMessage.setChatId(chatId);
             user.setState(UserState.SLEEP);
-            userRepository.save(user);
+            userCacheService.save(user);
             BotLogger.info(text, chatId);
             return sendMessage;
         }
@@ -83,8 +82,8 @@ public class InviteHandler {
         invite.setHintsCount(invite.getHintsCount() + 1);
         inviteRepository.save(invite);
         user1.setInvite(invite);
-        userRepository.save(user1);
-        userRepository.save(user);
+        userCacheService.save(user1);
+        userCacheService.save(user);
         lastUser = user1;
         text = "Вам начислена 1 подсказка за приглашение.";
         sendMessage.setText(text);
@@ -118,7 +117,7 @@ public class InviteHandler {
                 sendMessage.setText(text);
                 BotLogger.info(text, chatId);
                 user.setState(UserState.SLEEP);
-                userRepository.save(user);
+                userCacheService.save(user);
                 return sendMessage;
             }
             List<Coordinates> coordinates = StreamSupport
@@ -140,7 +139,7 @@ public class InviteHandler {
             sendMessage.setText(text);
             sendMessage.setReplyMarkup(inlineKeyboardMarkup);
             user.setState(UserState.AWAIT_USER_SELECT_HINT);
-            userRepository.save(user);
+            userCacheService.save(user);
             BotLogger.info(text, chatId);
             return sendMessage;
         }
@@ -148,7 +147,7 @@ public class InviteHandler {
             text = "Отменено.";
             sendMessage.setText(text);
             user.setState(UserState.SLEEP);
-            userRepository.save(user);
+            userCacheService.save(user);
             BotLogger.info(text, chatId);
             return sendMessage;
         }
@@ -156,13 +155,13 @@ public class InviteHandler {
             text = "Ваша индивидуальная ссылка для приглашения:\n" + user.getInvite().getUniqueUrl();
             sendMessage.setText(text);
             user.setState(UserState.SLEEP);
-            userRepository.save(user);
+            userCacheService.save(user);
             BotLogger.info(text, chatId);
             return sendMessage;
         }
         text = "Команда мне не понятна. Повторите это действие позже.";
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }
@@ -206,7 +205,7 @@ public class InviteHandler {
         inviteRepository.save(invite);
         user.setInvite(invite);
         user.setState(UserState.SLEEP);
-        userRepository.save(user);
+        userCacheService.save(user);
         BotLogger.info(text, chatId);
         return sendMessage;
     }
