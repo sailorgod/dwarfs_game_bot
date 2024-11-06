@@ -106,7 +106,6 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
 
     private void update(String updateText, Update update, UserEntity user) {
         if(updateText != null) {
-            //TODO: Пофиксить команду старт так, чтобы не возникало повторного создания юзера
             CommandsHandler commandsHandler = null;
             if(user.getUserChatId().equals(transactionsHandler.getAdminUserProperty().getChatId())) {
                 commandsHandler = transactionsHandler.getCommandsHandlerForAdmin();
@@ -198,7 +197,6 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
                     execute(transactionsHandler.getStartHandler().wellComeMessageForAdmin(user));
                     return;
                 }
-                //TODO: Исправить в дальнейшем на другое решение команды start
                 user.setState(UserState.SLEEP);
                 userCacheService.save(user);
                 onUpdateReceived(update);

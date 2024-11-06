@@ -1,0 +1,158 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: "user"
+      changes:
+      - createTable:
+          tableName: "invite"
+          columns:
+            - column:
+                name: "id"
+                type: "INTEGER"
+                autoIncrement: true
+                constraints:
+                  primaryKey: true
+                  nullable: false
+            - column:
+                name: "unique_url"
+                type: "VARCHAR(255)"
+                constraints:
+                  nullable: false
+            - column:
+                name: "hints_count"
+                type: "INTEGER"
+                constraints:
+                  nullable: false
+  - changeSet:
+      id: 2
+      author: "user"
+      changes:
+        - createTable:
+            tableName: "user_entity"
+            columns:
+              - column:
+                  name: "id"
+                  type: "BIGINT"
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: "name"
+                  type: "VARCHAR(255)"
+              - column:
+                  name: "chat_id"
+                  type: "VARCHAR(255)"
+              - column:
+                  name: "state"
+                  type: "TEXT"
+              - column:
+                  name: "last_message"
+                  type: "TEXT"
+              - column:
+                  name: "last_message_time"
+                  type: "TIMESTAMP"
+              - column:
+                  name: "invite_id"
+                  type: "INTEGER"
+                  constraints:
+                    nullable: true
+        - addForeignKeyConstraint:
+            baseTableName: "user_entity"
+            baseColumnNames: "invite_id"
+            constraintName: "fk_user_invite"
+            referencedTableName: "invite"
+            referencedColumnNames: "id"
+
+  - changeSet:
+      id: 3
+      author: "user"
+      changes:
+        - createTable:
+            tableName: "hint"
+            columns:
+              - column:
+                  name: "id"
+                  type: "INTEGER"
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: "hint_description"
+                  type: "TEXT"
+              - column:
+                  name: "coordinate_id"
+                  type: "INTEGER"
+
+  - changeSet:
+      id: 4
+      author: "user"
+      changes:
+        - createTable:
+            tableName: "coordinate"
+            columns:
+              - column:
+                  name: "id"
+                  type: "INTEGER"
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: "coordinates"
+                  type: "VARCHAR(255)"
+              - column:
+                  name: "description"
+                  type: "TEXT"
+              - column:
+                  name: "dwarf_id"
+                  type: "INTEGER"
+              - addForeignKeyConstraint:
+                      baseTableName: "coordinate"
+                      baseColumnNames: "hint_id"
+                      constraintName: "fk_coordinate_hint"
+                      referencedTableName: "hint"
+                      referencedColumnNames: "id"
+
+  - changeSet:
+      id: 5
+      author: "user"
+      changes:
+        - createTable:
+            tableName: "dwarf"
+            columns:
+              - column:
+                  name: "id"
+                  type: "INTEGER"
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: "name"
+                  type: "VARCHAR(255)"
+              - column:
+                  name: "description"
+                  type: "TEXT"
+
+  - changeSet:
+      id: 6
+      author: "user"
+      changes:
+        - createTable:
+            tableName: "event"
+            columns:
+              - column:
+                  name: "id"
+                  type: "BIGINT"
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: "name"
+                  type: "VARCHAR(255)"
+              - column:
+                  name: "description"
+                  type: "TEXT"
+              - column:
+                  name: "event_date_time"
+                  type: "TIMESTAMP"

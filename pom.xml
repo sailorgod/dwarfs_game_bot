@@ -11,7 +11,7 @@
 	</parent>
 
 	<groupId>com.sailordev</groupId>
-	<artifactId>dvorfs-game-bot</artifactId>
+	<artifactId>dwarfs-game-bot</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>dwarfs-game-bot</name>
 	<description>Dwarfs Game Bot</description>
@@ -43,10 +43,10 @@
 			<version>2.3.1</version>
 		</dependency>
 
-<!--		<dependency>-->
-<!--			<groupId>org.liquibase</groupId>-->
-<!--			<artifactId>liquibase-core</artifactId>-->
-<!--		</dependency>-->
+		<dependency>
+			<groupId>org.liquibase</groupId>
+			<artifactId>liquibase-core</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>
