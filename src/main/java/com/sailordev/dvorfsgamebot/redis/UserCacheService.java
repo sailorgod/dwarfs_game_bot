@@ -34,12 +34,14 @@ public class UserCacheService {
         String userId = redisKeysTemplate.opsForValue().get(CHAT_ID_CACHE_PREFIX + chatId);
         UserEntity user = redisUserTemplate.opsForValue().get(ID_CACHE_PREFIX + userId);
         if(user != null) {
+            user.setLastMessageTime(LocalDateTime.now());
             return Optional.of(user);
         }
         return userRepository.findByUserChatId(chatId);
     }
 
     public void save(UserEntity user){
+        user.setLastMessageTime(LocalDateTime.now());
         String userIdKey = ID_CACHE_PREFIX + user.getId();
         String chatIdKey = CHAT_ID_CACHE_PREFIX + user.getUserChatId();
         redisUserTemplate.opsForValue().

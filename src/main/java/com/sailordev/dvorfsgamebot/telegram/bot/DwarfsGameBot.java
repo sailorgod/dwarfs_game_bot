@@ -49,8 +49,8 @@ public class DwarfsGameBot extends TelegramLongPollingBot {
             if(user.getState().equals(UserState.BAN)) {
                 return;
             }
-            if(LocalDateTime.now().isAfter(
-                    user.getLastMessageTime().plusSeconds(2))){
+            if(LocalDateTime.now().isBefore(
+                    user.getLastMessageTime().plusSeconds(1))){
                 try{
                     if(user.getWarnCount() == 4) {
                         user.setState(UserState.BAN);
