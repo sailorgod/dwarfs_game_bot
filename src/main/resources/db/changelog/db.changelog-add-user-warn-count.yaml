@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: "user"
+      changes:
+        - addColumn:
+            tableName: "user_entity"
+            columns:
+              - column:
+                  name: "warn_count"
+                  type: "INTEGER"
+                  defaultValueNumeric: 0
